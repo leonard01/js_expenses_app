@@ -45,7 +45,28 @@ async function startServer() {
       const user = await User.create(req.body);
       res.status(201).json(user);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      // Check if the error is a unique constraint error
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        // Build a message based on which fields are duplicated
+        const messages = error.errors.map(err => {
+          if (err.path === 'username') {
+            return 'Duplicate username';
+          } else if (err.path === 'email') {
+            return 'Duplicate email';
+          } else {
+            return err.message;
+          }
+        });
+        return res.status(400).json({ error: messages.join(', ') });
+      }
+      // Check if it is a general validation error (e.g., missing fields)
+      if (error.name === 'SequelizeValidationError') {
+        const messages = error.errors.map(err => err.message);
+        return res.status(400).json({ error: messages.join(', ') });
+      }
+      // For any other errors, log and send a generic 500 error
+      console.error(error);
+      return res.status(500).json({ error: error.message });
     }
   });
 
