@@ -1,4 +1,3 @@
-// startApp.js
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -76,19 +75,31 @@ async function startServer() {
     }
   });
 
-  // New Route: Get expenses for a user by either userId or email
+  // New DELETE route: Delete an expense by its id
+  app.delete('/expenses/:id', async (req, res) => {
+    try {
+      const expense = await Expense.findByPk(req.params.id);
+      if (!expense) {
+        return res.status(404).json({ error: 'Expense not found' });
+      }
+      await expense.destroy();
+      res.json({ message: 'Expense deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Updated GET route: View expenses for a user by either userId or email with user validation
   app.get('/expenses', async (req, res) => {
     const { userId, email } = req.query;
     try {
       let user;
       if (userId) {
-        // Look up user by primary key
         user = await User.findByPk(userId);
         if (!user) {
           return res.status(404).json({ error: 'User not found for the given user ID.' });
         }
       } else if (email) {
-        // Look up user by email
         user = await User.findOne({ where: { email } });
         if (!user) {
           return res.status(404).json({ error: 'User not found for the given email.' });
@@ -96,8 +107,6 @@ async function startServer() {
       } else {
         return res.status(400).json({ error: 'Please provide either userId or email as a query parameter.' });
       }
-  
-      // User exists - now query their expenses
       const expenses = await Expense.findAll({
         where: { user_id: user.id },
         order: [['expense_date', 'DESC']]

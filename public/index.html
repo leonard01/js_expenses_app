@@ -10,6 +10,9 @@
     input, textarea { margin-bottom: 10px; }
     button { margin-top: 10px; }
     .message { margin-top: 1rem; padding: 10px; border: 1px solid #ccc; width: 400px; }
+    table { border-collapse: collapse; margin-top: 1rem; }
+    table, th, td { border: 1px solid #000; }
+    th, td { padding: 5px; text-align: left; }
   </style>
 </head>
 <body>
@@ -142,7 +145,7 @@
       }
     });
 
-    // Handle view expenses form submission
+    // Handle view expenses form submission and display as a table with delete buttons
     document.getElementById('viewExpensesForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -167,8 +170,20 @@
           if (data.length === 0) {
             resultEl.textContent = 'No expenses found for the given user.';
           } else {
-            // Format the returned array of expenses in a nice JSON string
-            resultEl.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            // Build an HTML table for the expenses with a delete button for each expense
+            let tableHtml = '<table><tr><th>ID</th><th>Amount</th><th>Category</th><th>Description</th><th>Date</th><th>Actions</th></tr>';
+            data.forEach(exp => {
+              tableHtml += `<tr id="expense-row-${exp.id}">
+                <td>${exp.id}</td>
+                <td>${exp.amount}</td>
+                <td>${exp.category}</td>
+                <td>${exp.description || ''}</td>
+                <td>${exp.expense_date}</td>
+                <td><button onclick="deleteExpense(${exp.id})">Delete</button></td>
+              </tr>`;
+            });
+            tableHtml += '</table>';
+            resultEl.innerHTML = tableHtml;
           }
         } else {
           resultEl.textContent = 'Error: ' + (data.error || 'An error occurred');
@@ -177,6 +192,28 @@
         document.getElementById('viewExpensesResult').textContent = 'Fetch error: ' + error.message;
       }
     });
+
+    // Function to delete an expense and update the UI
+    async function deleteExpense(expenseId) {
+      try {
+        const response = await fetch(`/expenses/${expenseId}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        if (response.ok) {
+          // Remove the expense's row from the table
+          const row = document.getElementById(`expense-row-${expenseId}`);
+          if (row) {
+            row.remove();
+          }
+          alert('Expense deleted successfully');
+        } else {
+          alert('Error: ' + (data.error || 'An error occurred while deleting the expense'));
+        }
+      } catch (error) {
+        alert('Fetch error: ' + error.message);
+      }
+    }
   </script>
 </body>
 </html>
