@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Expense Tracker</title>
+    <style>
+       body { font-family: Arial, sans-serif; margin: 2rem; }
+       form { margin-bottom: 20px; border: 1px solid #ccc; padding: 1rem; }
+       label { display: inline-block; width: 120px; }
+       input, textarea { margin-bottom: 10px; }
+       button { margin-top: 10px; }
+       .message { margin-top: 1rem; padding: 10px; border: 1px solid #ccc; width: 400px; }
+    </style>
+</head>
+<body>
+    <h1>Expense Tracker</h1>
+
+    <!-- Create User Form -->
+    <h2>Create User</h2>
+    <form id="userForm">
+       <div>
+         <label for="username">Username:</label>
+         <input type="text" id="username" name="username" required>
+       </div>
+       <div>
+         <label for="email">Email:</label>
+         <input type="email" id="email" name="email" required>
+       </div>
+       <div>
+         <label for="password">Password:</label>
+         <input type="password" id="password" name="password" required>
+       </div>
+       <button type="submit">Create User</button>
+    </form>
+    <div class="message" id="userResult"></div>
+
+    <!-- Add Expense Form -->
+    <h2>Add Expense</h2>
+    <form id="expenseForm">
+      <div>
+         <label for="user_id">User ID:</label>
+         <input type="text" id="user_id" name="user_id" required>
+      </div>
+      <div>
+         <label for="amount">Amount:</label>
+         <input type="number" step="0.01" id="amount" name="amount" required>
+      </div>
+      <div>
+         <label for="category">Category:</label>
+         <input type="text" id="category" name="category" required>
+      </div>
+      <div>
+         <label for="description">Description:</label>
+         <textarea id="description" name="description" rows="3"></textarea>
+      </div>
+      <div>
+         <label for="expense_date">Expense Date:</label>
+         <input type="date" id="expense_date" name="expense_date" required>
+      </div>
+      <button type="submit">Submit Expense</button>
+    </form>
+    <div class="message" id="expenseResult"></div>
+    
+    <script>
+       // Handle user creation form submission
+       document.getElementById('userForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const user = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            // Map the "password" input to "password_hash" for the model
+            password_hash: document.getElementById('password').value
+          };
+
+          try {
+            const response = await fetch('http://localhost:3000/users', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(user)
+                });
+             const data = await response.json();
+             const resultEl = document.getElementById('userResult');
+             if (response.ok) {
+                resultEl.textContent = 'User created successfully! User ID: ' + data.id;
+                resultEl.style.borderColor = 'green';
+                // Autofill the User ID in the expense form for convenience.
+                document.getElementById('user_id').value = data.id;
+             } else {
+                resultEl.textContent = 'Error: ' + (data.error || 'An error occurred');
+                resultEl.style.borderColor = 'red';
+             }
+          } catch (error) {
+             document.getElementById('userResult').textContent = 'Fetch error: ' + error.message;
+          }
+       });
+
+       // Handle expense form submission
+       document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const expense = {
+             user_id: document.getElementById('user_id').value,
+             amount: document.getElementById('amount').value,
+             category: document.getElementById('category').value,
+             description: document.getElementById('description').value,
+             expense_date: document.getElementById('expense_date').value,
+          };
+
+          try {
+             const response = await fetch('/expenses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(expense)
+             });
+             const data = await response.json();
+             const resultEl = document.getElementById('expenseResult');
+             if (response.ok) {
+                resultEl.textContent = 'Expense added successfully!';
+                resultEl.style.borderColor = 'green';
+             } else {
+                resultEl.textContent = 'Error: ' + (data.error || 'An error occurred');
+                resultEl.style.borderColor = 'red';
+             }
+          } catch (error) {
+             document.getElementById('expenseResult').textContent = 'Fetch error: ' + error.message;
+          }
+       });
+    </script>
+</body>
+</html>
