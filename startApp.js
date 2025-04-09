@@ -34,20 +34,18 @@ async function createDatabaseIfNotExists() {
 async function startServer() {
   const app = express();
   app.use(express.json());
-  
+
   // Serve static files from the public folder
   app.use(express.static(path.join(__dirname, 'public')));
 
-  // Route to create a new user
+  // Route to create a new user with enhanced error handling
   app.post('/users', async (req, res) => {
     console.log('POST /users was hit with data:', req.body);
     try {
       const user = await User.create(req.body);
       res.status(201).json(user);
     } catch (error) {
-      // Check if the error is a unique constraint error
       if (error.name === 'SequelizeUniqueConstraintError') {
-        // Build a message based on which fields are duplicated
         const messages = error.errors.map(err => {
           if (err.path === 'username') {
             return 'Duplicate username';
@@ -59,12 +57,10 @@ async function startServer() {
         });
         return res.status(400).json({ error: messages.join(', ') });
       }
-      // Check if it is a general validation error (e.g., missing fields)
       if (error.name === 'SequelizeValidationError') {
         const messages = error.errors.map(err => err.message);
         return res.status(400).json({ error: messages.join(', ') });
       }
-      // For any other errors, log and send a generic 500 error
       console.error(error);
       return res.status(500).json({ error: error.message });
     }
@@ -80,12 +76,31 @@ async function startServer() {
     }
   });
 
-  // (Optional) Route to retrieve expenses for a given user
-  app.get('/expenses/:userId', async (req, res) => {
+  // New Route: Get expenses for a user by either userId or email
+  app.get('/expenses', async (req, res) => {
+    const { userId, email } = req.query;
     try {
+      let user;
+      if (userId) {
+        // Look up user by primary key
+        user = await User.findByPk(userId);
+        if (!user) {
+          return res.status(404).json({ error: 'User not found for the given user ID.' });
+        }
+      } else if (email) {
+        // Look up user by email
+        user = await User.findOne({ where: { email } });
+        if (!user) {
+          return res.status(404).json({ error: 'User not found for the given email.' });
+        }
+      } else {
+        return res.status(400).json({ error: 'Please provide either userId or email as a query parameter.' });
+      }
+  
+      // User exists - now query their expenses
       const expenses = await Expense.findAll({
-        where: { user_id: req.params.userId },
-        order: [['expense_date', 'DESC']],
+        where: { user_id: user.id },
+        order: [['expense_date', 'DESC']]
       });
       res.json(expenses);
     } catch (error) {
